@@ -1,0 +1,859 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Retrenchment Laptop Tracker",
+    "version": "0.1.0",
+    "description": "Tracks laptops returned during retrenchment per department through a 4-step checklist (returned, Snipe-IT, inventory tag, Windows 11)."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Readiness probe; returns ok when the server is up.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "summary": "Returns the signed-in user's email from Google SSO (null when not signed in).",
+        "operationId": "me_api_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/departments": {
+      "get": {
+        "summary": "Lists department tabs (e.g. RTM, Ninja Mart) in display order.",
+        "operationId": "list_departments_api_departments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Creates a new department tab.",
+        "operationId": "create_department_api_departments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/laptops": {
+      "get": {
+        "summary": "Lists every tracked laptop across all departments with checklist fields.",
+        "operationId": "list_laptops_api_laptops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaptopList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Adds a laptop to a department.",
+        "operationId": "create_laptop_api_laptops_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaptopCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Laptop"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/laptops/{laptop_id}": {
+      "put": {
+        "summary": "Updates one laptop; fails with 409 if someone else changed it first (version check).",
+        "operationId": "update_laptop_api_laptops__laptop_id__put",
+        "parameters": [
+          {
+            "name": "laptop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Laptop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaptopUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Laptop"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/import": {
+      "post": {
+        "summary": "Merges rows from an Excel sheet into departments; dryRun previews changes without saving. Blank cells never erase data and Returned is never set back to Pending.",
+        "operationId": "import_rows_api_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Department": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "order"
+        ],
+        "title": "Department"
+      },
+      "DepartmentIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DepartmentIn"
+      },
+      "DepartmentList": {
+        "properties": {
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            },
+            "type": "array",
+            "title": "Departments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "departments"
+        ],
+        "title": "DepartmentList"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "Health"
+      },
+      "ImportChange": {
+        "properties": {
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "laptop": {
+            "type": "string",
+            "title": "Laptop"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "old": {
+            "type": "string",
+            "title": "Old"
+          },
+          "new": {
+            "type": "string",
+            "title": "New"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department",
+          "laptop",
+          "field",
+          "old",
+          "new"
+        ],
+        "title": "ImportChange"
+      },
+      "ImportConflict": {
+        "properties": {
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "laptop": {
+            "type": "string",
+            "title": "Laptop"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "kept": {
+            "type": "string",
+            "title": "Kept"
+          },
+          "other": {
+            "type": "string",
+            "title": "Other"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department",
+          "laptop",
+          "field",
+          "kept",
+          "other"
+        ],
+        "title": "ImportConflict"
+      },
+      "ImportIn": {
+        "properties": {
+          "dryRun": {
+            "type": "boolean",
+            "title": "Dryrun",
+            "default": true
+          },
+          "sheets": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSheet"
+            },
+            "type": "array",
+            "title": "Sheets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sheets"
+        ],
+        "title": "ImportIn"
+      },
+      "ImportNew": {
+        "properties": {
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "laptop": {
+            "type": "string",
+            "title": "Laptop"
+          },
+          "returnStatus": {
+            "type": "string",
+            "title": "Returnstatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department",
+          "laptop",
+          "returnStatus"
+        ],
+        "title": "ImportNew"
+      },
+      "ImportResult": {
+        "properties": {
+          "applied": {
+            "type": "boolean",
+            "title": "Applied"
+          },
+          "updatedLaptops": {
+            "type": "integer",
+            "title": "Updatedlaptops"
+          },
+          "newLaptops": {
+            "type": "integer",
+            "title": "Newlaptops"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ImportChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "added": {
+            "items": {
+              "$ref": "#/components/schemas/ImportNew"
+            },
+            "type": "array",
+            "title": "Added"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ImportConflict"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "skippedRows": {
+            "type": "integer",
+            "title": "Skippedrows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "applied",
+          "updatedLaptops",
+          "newLaptops",
+          "changes",
+          "added",
+          "conflicts",
+          "skippedRows"
+        ],
+        "title": "ImportResult"
+      },
+      "ImportSheet": {
+        "properties": {
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department",
+          "rows"
+        ],
+        "title": "ImportSheet"
+      },
+      "Laptop": {
+        "properties": {
+          "employeeName": {
+            "type": "string",
+            "title": "Employeename",
+            "default": ""
+          },
+          "employeeId": {
+            "type": "string",
+            "title": "Employeeid",
+            "default": ""
+          },
+          "subDept": {
+            "type": "string",
+            "title": "Subdept",
+            "default": ""
+          },
+          "manufacturer": {
+            "type": "string",
+            "title": "Manufacturer",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "hostname": {
+            "type": "string",
+            "title": "Hostname",
+            "default": ""
+          },
+          "inventoryTag": {
+            "type": "string",
+            "title": "Inventorytag",
+            "default": ""
+          },
+          "serial": {
+            "type": "string",
+            "title": "Serial",
+            "default": ""
+          },
+          "returnStatus": {
+            "type": "string",
+            "title": "Returnstatus",
+            "default": "Pending"
+          },
+          "dateReturned": {
+            "type": "string",
+            "title": "Datereturned",
+            "default": ""
+          },
+          "snipeit": {
+            "type": "string",
+            "title": "Snipeit",
+            "default": ""
+          },
+          "win11": {
+            "type": "string",
+            "title": "Win11",
+            "default": ""
+          },
+          "win11Version": {
+            "type": "string",
+            "title": "Win11Version",
+            "default": ""
+          },
+          "remarks": {
+            "type": "string",
+            "title": "Remarks",
+            "default": ""
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "dept": {
+            "type": "string",
+            "title": "Dept"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "updatedBy": {
+            "type": "string",
+            "title": "Updatedby"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "dept",
+          "order",
+          "updatedBy",
+          "updatedAt",
+          "version"
+        ],
+        "title": "Laptop"
+      },
+      "LaptopCreate": {
+        "properties": {
+          "employeeName": {
+            "type": "string",
+            "title": "Employeename",
+            "default": ""
+          },
+          "employeeId": {
+            "type": "string",
+            "title": "Employeeid",
+            "default": ""
+          },
+          "subDept": {
+            "type": "string",
+            "title": "Subdept",
+            "default": ""
+          },
+          "manufacturer": {
+            "type": "string",
+            "title": "Manufacturer",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "hostname": {
+            "type": "string",
+            "title": "Hostname",
+            "default": ""
+          },
+          "inventoryTag": {
+            "type": "string",
+            "title": "Inventorytag",
+            "default": ""
+          },
+          "serial": {
+            "type": "string",
+            "title": "Serial",
+            "default": ""
+          },
+          "returnStatus": {
+            "type": "string",
+            "title": "Returnstatus",
+            "default": "Pending"
+          },
+          "dateReturned": {
+            "type": "string",
+            "title": "Datereturned",
+            "default": ""
+          },
+          "snipeit": {
+            "type": "string",
+            "title": "Snipeit",
+            "default": ""
+          },
+          "win11": {
+            "type": "string",
+            "title": "Win11",
+            "default": ""
+          },
+          "win11Version": {
+            "type": "string",
+            "title": "Win11Version",
+            "default": ""
+          },
+          "remarks": {
+            "type": "string",
+            "title": "Remarks",
+            "default": ""
+          },
+          "dept": {
+            "type": "string",
+            "title": "Dept"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dept"
+        ],
+        "title": "LaptopCreate"
+      },
+      "LaptopList": {
+        "properties": {
+          "laptops": {
+            "items": {
+              "$ref": "#/components/schemas/Laptop"
+            },
+            "type": "array",
+            "title": "Laptops"
+          }
+        },
+        "type": "object",
+        "required": [
+          "laptops"
+        ],
+        "title": "LaptopList"
+      },
+      "LaptopUpdate": {
+        "properties": {
+          "employeeName": {
+            "type": "string",
+            "title": "Employeename",
+            "default": ""
+          },
+          "employeeId": {
+            "type": "string",
+            "title": "Employeeid",
+            "default": ""
+          },
+          "subDept": {
+            "type": "string",
+            "title": "Subdept",
+            "default": ""
+          },
+          "manufacturer": {
+            "type": "string",
+            "title": "Manufacturer",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "hostname": {
+            "type": "string",
+            "title": "Hostname",
+            "default": ""
+          },
+          "inventoryTag": {
+            "type": "string",
+            "title": "Inventorytag",
+            "default": ""
+          },
+          "serial": {
+            "type": "string",
+            "title": "Serial",
+            "default": ""
+          },
+          "returnStatus": {
+            "type": "string",
+            "title": "Returnstatus",
+            "default": "Pending"
+          },
+          "dateReturned": {
+            "type": "string",
+            "title": "Datereturned",
+            "default": ""
+          },
+          "snipeit": {
+            "type": "string",
+            "title": "Snipeit",
+            "default": ""
+          },
+          "win11": {
+            "type": "string",
+            "title": "Win11",
+            "default": ""
+          },
+          "win11Version": {
+            "type": "string",
+            "title": "Win11Version",
+            "default": ""
+          },
+          "remarks": {
+            "type": "string",
+            "title": "Remarks",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "LaptopUpdate"
+      },
+      "Me": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "Me"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
