@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retrenchment Laptop Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: red masthead with department tabs, then per-tab summary + checklist card, toolbar, laptop list (table on desktop, cards on phone), slide-in edit panel. Single red & white look by request. */
+:root {
+  --red: #C8102E;
+  --red-dark: #9E0C24;
+  --red-soft: #FCEBEE;
+  --ink: #1F1A1C;
+  --muted: #6B6266;
+  --line: #ECE4E6;
+  --paper: #FFFFFF;
+  --ground: #FAF6F7;
+  --green: #1E7A46; --green-bg: #E6F4EC;
+  --amber: #9A5B00; --amber-bg: #FFF2DB;
+  --blue: #1D5FA8;  --blue-bg: #E7F0FB;
+  --teal: #0F6E6E;  --teal-bg: #E2F3F2;
+  --grey: #5E5A5C;  --grey-bg: #F0EDEE;
+  --f-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+/* Masthead */
+.mast { background: var(--red); color: #fff; padding: 20px 16px 0; }
+.mast-inner, .wrap { max-width: 1240px; margin: 0 auto; }
+.mast-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark { width: 40px; height: 40px; border-radius: 10px; background: #fff; display: grid; place-items: center; flex: none; }
+.brand-mark svg { width: 24px; height: 24px; }
+.brand h1 { font-family: var(--f-display); font-weight: 800; font-size: 22px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.brand p { margin: 2px 0 0; font-size: 13px; color: rgba(255,255,255,.82); }
+.mast-actions { display: flex; align-items: center; gap: 10px; }
+.me { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.9); }
+.me img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); }
+.tabs { display: flex; gap: 4px; margin-top: 18px; overflow-x: auto; scrollbar-width: none; }
+.tab { border: 0; background: transparent; color: rgba(255,255,255,.85); padding: 10px 16px 12px; border-radius: 10px 10px 0 0; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.tab:hover { background: rgba(255,255,255,.12); color: #fff; }
+.tab[aria-selected="true"] { background: var(--ground); color: var(--red); }
+.tab .count { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: rgba(255,255,255,.2); }
+.tab[aria-selected="true"] .count { background: var(--red-soft); }
+.tab.add { color: #fff; opacity: .9; }
+
+.wrap { padding: 24px 16px 64px; display: grid; gap: 20px; }
+
+/* Buttons */
+.btn { border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: #d8cdd0; background: #fff; }
+.btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.primary:hover { background: var(--red-dark); }
+.btn.on-red { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.35); color: #fff; }
+.btn.on-red:hover { background: rgba(255,255,255,.24); }
+.btn svg { width: 16px; height: 16px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+/* Summary */
+.summary { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+.big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.big .pct { font-family: var(--f-display); font-weight: 800; font-size: 52px; line-height: 1; color: var(--red); font-variant-numeric: tabular-nums; }
+.big .of { color: var(--muted); font-size: 15px; }
+.big .of b { color: var(--ink); }
+.bar { height: 14px; border-radius: 99px; background: var(--red-soft); overflow: hidden; margin-top: 16px; }
+.bar > i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .5s ease; }
+.mini-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+.mini-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.steps { display: grid; gap: 6px; align-content: start; }
+.step { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; text-align: left; width: 100%; }
+.step:hover { background: var(--ground); }
+.step.active { border-color: var(--red); background: var(--red-soft); }
+.step .ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--red-soft); color: var(--red); }
+.step .ico svg { width: 16px; height: 16px; }
+.step .label { font-weight: 600; }
+.step .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.step .track { height: 6px; background: var(--grey-bg); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+.step .track i { display: block; height: 100%; background: var(--red); }
+.step .num { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--muted); }
+.step .num b { color: var(--ink); }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.search { flex: 1 1 260px; position: relative; min-width: 0; }
+.search input { width: 100%; padding: 9px 12px 9px 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.search svg { position: absolute; left: 11px; top: 50%; translate: 0 -50%; width: 16px; height: 16px; color: var(--muted); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--paper); padding: 6px 12px; border-radius: 99px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.chip b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; margin-left: 2px; }
+.chip[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+.chip[aria-pressed="true"] b { color: #fff; }
+.toolbar select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.spacer { flex: 1 1 0; }
+.result-note { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.link { border: 0; background: none; color: var(--red); font-weight: 600; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Table */
+.list { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 1160px; }
+.kv { display: flex; gap: 8px; align-items: baseline; }
+.kv .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); width: 64px; flex: none; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 12px 14px; background: #FDFAFB; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: #FFF8F9; }
+tbody tr:last-child td { border-bottom: 0; }
+.mono { font-family: var(--f-mono); font-size: 13px; }
+.dim { color: var(--muted); font-size: 12px; }
+.cell-main { font-weight: 600; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-green { color: var(--green); background: var(--green-bg); }
+.p-amber { color: var(--amber); background: var(--amber-bg); }
+.p-blue { color: var(--blue); background: var(--blue-bg); }
+.p-teal { color: var(--teal); background: var(--teal-bg); }
+.p-red { color: var(--red); background: var(--red-soft); }
+.p-grey { color: var(--grey); background: var(--grey-bg); }
+.p-none { color: var(--muted); background: transparent; padding-left: 0; }
+.p-none::before { display: none; }
+.checks { display: flex; gap: 4px; align-items: center; }
+.ck { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; border: 1.5px dashed #D9CFD2; color: #C4B8BC; }
+.ck svg { width: 14px; height: 14px; }
+.ck.on { background: var(--green); border: 1.5px solid var(--green); color: #fff; }
+.done-tag { font-size: 12px; font-weight: 700; color: var(--green); margin-left: 6px; }
+.upd { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* Cards (phone) */
+.cards { display: none; }
+.card { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; cursor: pointer; }
+.card:last-child { border-bottom: 0; }
+.card-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.card-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.empty { padding: 48px 20px; text-align: center; color: var(--muted); }
+.empty h3 { font-family: var(--f-display); color: var(--ink); margin: 0 0 6px; font-size: 17px; }
+
+/* Help */
+details.help { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; }
+details.help summary { padding: 12px 0; font-weight: 600; cursor: pointer; color: var(--ink); }
+details.help ul { margin: 0 0 14px; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+details.help b { color: var(--ink); }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(31,26,28,.38); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--paper); z-index: 21; display: flex; flex-direction: column; box-shadow: -12px 0 40px rgba(31,26,28,.18); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.drawer-head { padding: 18px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.drawer-head h2 { font-family: var(--f-display); margin: 0; font-size: 19px; }
+.drawer-body { padding: 18px 20px; overflow-y: auto; flex: 1; display: grid; gap: 20px; align-content: start; }
+.drawer-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.drawer-foot .msg { margin-right: auto; font-size: 13px; color: var(--red); }
+.x { border: 0; background: var(--ground); width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.x svg { width: 18px; height: 18px; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 12px; }
+legend { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--red); font-weight: 700; margin-bottom: 10px; padding: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; }
+.field .hint { font-size: 12px; color: var(--muted); }
+.field input, .field select, .field textarea { width: 100%; padding: 9px 11px; border: 1px solid #DDD3D6; border-radius: 8px; background: #fff; }
+.field textarea { min-height: 70px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--red); outline: none; box-shadow: 0 0 0 3px var(--red-soft); }
+.warn { font-size: 12px; color: var(--amber); background: var(--amber-bg); padding: 6px 10px; border-radius: 6px; }
+.live-checklist { background: var(--ground); border-radius: 12px; padding: 14px; display: grid; gap: 8px; }
+.live-checklist .row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.live-checklist .row .why { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
+.live-checklist .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.meta { font-size: 12px; color: var(--muted); }
+
+/* Modal */
+.modal { position: fixed; z-index: 22; left: 50%; top: 50%; translate: -50% -50%; width: min(420px, calc(100% - 32px)); background: var(--paper); border-radius: 14px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 20px 60px rgba(31,26,28,.25); }
+.modal h2 { font-family: var(--f-display); margin: 0; font-size: 19px; }
+.modal p { margin: 0; color: var(--muted); }
+.modal .row { display: flex; gap: 10px; justify-content: flex-end; }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 99px; font-weight: 600; z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.banner { background: var(--amber-bg); color: var(--amber); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; }
+
+@media (max-width: 860px) {
+  .summary { grid-template-columns: 1fr; gap: 18px; }
+}
+@media (max-width: 760px) {
+  .table-scroll { display: none; }
+  .cards { display: block; }
+  .big .pct { font-size: 42px; }
+  .brand h1 { font-size: 19px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .me span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+html, body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.import-sheets { display: grid; gap: 8px; }
+.import-sheet { display: grid; grid-template-columns: minmax(0,1fr) 180px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.import-sheet .dim { display: block; }
+.import-sheet select { padding: 7px 9px; border: 1px solid #DDD3D6; border-radius: 8px; background: #fff; }
+.import-summary { display: grid; gap: 8px; }
+.import-summary .nums { display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; }
+.import-summary .nums b { font-size: 20px; font-family: var(--f-display); color: var(--red); }
+.import-list { max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+.import-list div { padding: 5px 10px; border-bottom: 1px solid var(--line); }
+.import-list div:last-child { border-bottom: 0; }
+.modal.wide { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #fff; color: var(--red); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+@media (max-width: 520px) { .import-sheet { grid-template-columns: 1fr; } }
+</style>
+
+</head>
+<body>
+
+
+<header class="mast">
+  <div class="mast-inner">
+    <div class="mast-top">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="1.5"/><path d="M2 19h20"/><path d="m9 9.5 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <h1>Retrenchment Laptop Tracker</h1>
+          <p>Track every laptop from return to ready-to-deploy</p>
+        </div>
+      </div>
+      <div class="mast-actions">
+        <button class="btn on-red" id="importBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Import Excel
+        </button>
+        <button class="btn on-red" id="exportAll" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Download all (Excel)
+        </button>
+        <div class="me" id="me" hidden><span class="avatar" id="meImg" aria-hidden="true"></span><span id="meName"></span></div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Departments"></nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div class="list"><div class="empty" id="boot"><h3>Loading laptops…</h3><p>Your RTM and Ninja Mart laptop lists will appear here in a moment.</p></div></div>
+</main>
+
+<div id="layer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(() => {
+  const ICON = {
+    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
+    db: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
+    win: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5 10.5 4.5v7H3zM13 4.2 21 3v8.5h-8zM3 13h7.5v6.5L3 18.5zM13 13h8v8l-8-1.2z"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+  };
+  const STEPS = [
+    { key: 'returned', label: 'Laptop returned', icon: ICON.box, rule: 'Return status is "Returned"', test: l => l.returnStatus === 'Returned' },
+    { key: 'snipe', label: 'Snipe-IT updated', icon: ICON.db, rule: 'A Snipe-IT status is chosen', test: l => !!l.snipeit },
+    { key: 'tag', label: 'Inventory tag checked', icon: ICON.tag, rule: 'Inventory tag is filled in', test: l => !!(l.inventoryTag || '').trim() },
+    { key: 'win', label: 'Windows 11 updated', icon: ICON.win, rule: 'Windows 11 is "Yes" or "N/a"', test: l => l.win11 === 'Yes' || l.win11 === 'N/a' }
+  ];
+  const doneCount = l => STEPS.reduce((n, s) => n + (s.test(l) ? 1 : 0), 0);
+  const isDone = l => doneCount(l) === STEPS.length;
+
+  const FILTERS = [
+    { key: 'all', label: 'All', test: () => true },
+    { key: 'todo', label: 'Not finished', test: l => !isDone(l) },
+    { key: 'done', label: 'Completed', test: isDone },
+    { key: 'pending', label: 'Not returned yet', test: l => l.returnStatus !== 'Returned' },
+    { key: 'faulty', label: 'Faulty', test: l => l.snipeit === 'Faulty' }
+  ];
+
+  const S = {
+    me: '', canWrite: true,
+    depts: [], laptops: [], loaded: { d: false, l: false }, sig: '',
+    tab: null, filter: 'all', step: null, q: '', sort: 'order'
+  };
+  try { const t = localStorage.getItem('lt-tab'); if (t) S.tab = t; } catch (e) {}
+  const hash = (location.hash || '').slice(1);
+  if (hash) S.tab = hash;
+
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDate = iso => { if (!iso) return ''; const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso); return isNaN(d) ? iso : d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }); };
+  const fmtWhen = iso => { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }); };
+
+  function toast(msg) {
+    const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2400);
+  }
+
+  const pillReturn = v => v === 'Returned' ? '<span class="pill p-green">Returned</span>' : '<span class="pill p-amber">Pending</span>';
+  const pillSnipe = v => ({ 'Ready to Deploy': 'p-green', 'Deploy': 'p-teal', 'In Checking': 'p-blue', 'Faulty': 'p-red' }[v] ? `<span class="pill ${({ 'Ready to Deploy': 'p-green', 'Deploy': 'p-teal', 'In Checking': 'p-blue', 'Faulty': 'p-red' })[v]}">${esc(v)}</span>` : '<span class="pill p-none">Not set</span>');
+  const pillWin = (v, ver) => v === 'Yes' ? `<span class="pill p-green">Yes${ver ? ' · ' + esc(ver) : ''}</span>` : v === 'No' ? '<span class="pill p-amber">No</span>' : v === 'N/a' ? '<span class="pill p-grey">N/a</span>' : '<span class="pill p-none">Not set</span>';
+  const checksHtml = l => `<div class="checks">${STEPS.map(s => `<span class="ck ${s.test(l) ? 'on' : ''}" title="${esc(s.label)}: ${s.test(l) ? 'done' : 'not yet'}">${s.test(l) ? ICON.check : ''}</span>`).join('')}</div>`;
+
+  const deptLaptops = id => S.laptops.filter(l => l.dept === id);
+  const currentDept = () => S.depts.find(d => d.id === S.tab) || S.depts[0];
+
+  function visible(list) {
+    const f = FILTERS.find(x => x.key === S.filter) || FILTERS[0];
+    const st = STEPS.find(x => x.key === S.step);
+    const q = S.q.trim().toLowerCase();
+    let out = list.filter(l => f.test(l) && (!st || !st.test(l)));
+    if (q) out = out.filter(l => [l.serial, l.hostname, l.inventoryTag, l.employeeName, l.employeeId, l.model, l.manufacturer, l.remarks].some(v => (v || '').toLowerCase().includes(q)));
+    if (S.sort === 'todo') out.sort((a, b) => doneCount(a) - doneCount(b) || (a.order || 0) - (b.order || 0));
+    else if (S.sort === 'recent') out.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    else out.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return out;
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch('/api' + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      const err = new Error((data && data.detail && typeof data.detail === 'string') ? data.detail : 'Something went wrong. Please try again.');
+      err.status = res.status; throw err;
+    }
+    return data;
+  }
+  const whoName = email => !email ? 'someone' : (email === S.me ? 'you' : email.split('@')[0]);
+  const updLine = l => l.updatedAt ? `${esc(whoName(l.updatedBy))} · ${esc(fmtWhen(l.updatedAt))}` : '<span class="dim">Not edited yet</span>';
+
+  /* ---------- Render ---------- */
+  function renderTabs() {
+    const el = $('#tabs');
+    const cur = currentDept();
+    el.innerHTML = S.depts.map(d => `<button class="tab" role="tab" type="button" data-tab="${esc(d.id)}" aria-selected="${cur && d.id === cur.id}">${esc(d.name)}<span class="count">${deptLaptops(d.id).length}</span></button>`).join('')
+      + (S.canWrite ? `<button class="tab add" type="button" id="addDept">${ICON.plus.replace('<svg', '<svg width="15" height="15"')} Add department</button>` : '');
+  }
+
+  function render() {
+    if (!S.loaded.d || !S.loaded.l) return;
+    renderTabs();
+    const main = $('#main');
+    const dept = currentDept();
+    if (!dept) {
+      main.innerHTML = `<div class="list"><div class="empty"><h3>No departments yet</h3><p>Use <b>Add department</b> in the red bar to create the first tab.</p></div></div>`;
+      return;
+    }
+    const all = deptLaptops(dept.id);
+    const done = all.filter(isDone).length;
+    const pct = all.length ? Math.round(done / all.length * 100) : 0;
+    const returned = all.filter(STEPS[0].test).length;
+    const faulty = all.filter(l => l.snipeit === 'Faulty').length;
+    const list = visible(all);
+    const stepObj = STEPS.find(s => s.key === S.step);
+    const filterObj = FILTERS.find(f => f.key === S.filter);
+    const ro = !S.canWrite ? '<div class="banner">You can view this tracker but not edit it. Ask the owner for edit access if you need to update laptops.</div>' : '';
+
+    main.innerHTML = `
+      ${ro}
+      <section class="summary" aria-label="${esc(dept.name)} summary">
+        <div>
+          <p class="eyebrow">${esc(dept.name)} · Overall progress</p>
+          <div class="big"><span class="pct">${pct}%</span><span class="of"><b>${done}</b> of <b>${all.length}</b> laptops fully completed</span></div>
+          <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Fully completed"><i style="width:${pct}%"></i></div>
+          <div class="mini-stats">
+            <span><b>${returned}</b> returned</span>
+            <span><b>${all.length - returned}</b> not returned yet</span>
+            <span><b>${faulty}</b> faulty</span>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Checklist · tap a step to see laptops still missing it</p>
+          <div class="steps">
+            ${STEPS.map(s => { const n = all.filter(s.test).length; const p = all.length ? n / all.length * 100 : 0; return `
+              <button class="step ${S.step === s.key ? 'active' : ''}" type="button" data-step="${s.key}" aria-pressed="${S.step === s.key}">
+                <span class="ico">${s.icon}</span>
+                <span><span class="label">${s.label}</span><span class="sub">${esc(s.rule)}</span><span class="track"><i style="width:${p}%"></i></span></span>
+                <span class="num"><b>${n}</b>/${all.length}</span>
+              </button>`; }).join('')}
+          </div>
+        </div>
+      </section>
+
+      <details class="help" id="help">
+        <summary>How to use this tab</summary>
+        <ul>
+          <li><b>Click any laptop</b> to open it and update its details.</li>
+          <li>The <b>4 checklist boxes tick themselves</b> when you fill in the matching field: Return status, Snipe-IT status, Inventory tag and Windows 11.</li>
+          <li>A laptop is <b>fully completed</b> when all 4 boxes are ticked. Windows 11 set to "N/a" counts as done.</li>
+          <li>Use the <b>search box</b> for serial number, hostname, tag or name, and the <b>filter buttons</b> to find what still needs work.</li>
+          <li><b>Download Excel</b> saves this tab as a spreadsheet. Everyone with the link sees changes straight away.</li>
+        </ul>
+      </details>
+
+      <div class="toolbar">
+        <label class="search">${ICON.search}<input id="q" type="search" placeholder="Search serial, hostname, tag, name…" value="${esc(S.q)}" aria-label="Search laptops"></label>
+        <div class="chips" role="group" aria-label="Filter">
+          ${FILTERS.map(f => `<button class="chip" type="button" data-filter="${f.key}" aria-pressed="${S.filter === f.key}">${f.label} <b>${all.filter(f.test).length}</b></button>`).join('')}
+        </div>
+        <select id="sort" aria-label="Sort">
+          <option value="order" ${S.sort === 'order' ? 'selected' : ''}>Original order</option>
+          <option value="todo" ${S.sort === 'todo' ? 'selected' : ''}>Most work left first</option>
+          <option value="recent" ${S.sort === 'recent' ? 'selected' : ''}>Recently updated</option>
+        </select>
+        <span class="spacer"></span>
+        <button class="btn" type="button" id="exportTab">${ICON.down} Download Excel</button>
+        ${S.canWrite ? `<button class="btn primary" type="button" id="addLaptop">${ICON.plus} Add laptop</button>` : ''}
+      </div>
+
+      <div class="result-note">
+        Showing <b>${list.length}</b> of ${all.length} laptops${filterObj && filterObj.key !== 'all' ? ` · ${esc(filterObj.label)}` : ''}${stepObj ? ` · missing “${esc(stepObj.label)}”` : ''}${S.q ? ` · matching “${esc(S.q)}”` : ''}
+        ${(S.filter !== 'all' || S.step || S.q) ? '<button class="link" type="button" id="clear">Clear filters</button>' : ''}
+      </div>
+
+      <div class="list">
+        ${list.length ? `
+        <div class="table-scroll"><table>
+          <thead><tr><th>Serial number</th><th>Hostname</th><th>Inventory tag</th><th>Laptop</th><th>Employee</th><th>Return</th><th>Snipe-IT</th><th>Windows 11</th><th>Checklist</th><th>Last updated</th></tr></thead>
+          <tbody>${list.map(l => `
+            <tr data-id="${esc(l.id)}" tabindex="0">
+              <td class="mono cell-main">${l.serial ? esc(l.serial) : '<span class="dim">—</span>'}</td>
+              <td class="mono">${l.hostname ? esc(l.hostname) : '<span class="dim">—</span>'}</td>
+              <td class="mono">${l.inventoryTag ? esc(l.inventoryTag) : '<span class="dim">—</span>'}</td>
+              <td><div class="cell-main">${esc(l.manufacturer || '—')}</div><div class="dim">${esc(l.model || '')}</div></td>
+              <td><div>${esc(l.employeeName || '—')}</div><div class="dim">${esc(l.employeeId || '')}</div></td>
+              <td>${pillReturn(l.returnStatus)}<div class="dim">${esc(fmtDate(l.dateReturned))}</div></td>
+              <td>${pillSnipe(l.snipeit)}</td>
+              <td>${pillWin(l.win11, l.win11Version)}</td>
+              <td><div style="display:flex;align-items:center">${checksHtml(l)}${isDone(l) ? '<span class="done-tag">Done</span>' : ''}</div></td>
+              <td class="upd">${updLine(l)}</td>
+            </tr>`).join('')}
+          </tbody></table></div>
+        <div class="cards">${list.map(l => `
+          <div class="card" data-id="${esc(l.id)}" tabindex="0">
+            <div class="card-top">
+              <div style="min-width:0"><div class="kv"><span class="k">Serial</span><span class="mono cell-main">${esc(l.serial || '—')}</span></div><div class="kv"><span class="k">Hostname</span><span class="mono">${esc(l.hostname || '—')}</span></div><div class="dim">${esc([l.manufacturer, l.model].filter(Boolean).join(' · ') || 'No model')}${l.employeeName ? ' · ' + esc(l.employeeName) : ''}</div></div>
+              ${checksHtml(l)}
+            </div>
+            <div class="card-pills">${pillReturn(l.returnStatus)}${pillSnipe(l.snipeit)}${l.win11 ? pillWin(l.win11, l.win11Version) : ''}</div>
+            <div class="upd">${updLine(l)}</div>
+          </div>`).join('')}
+        </div>` : `<div class="empty"><h3>${all.length ? 'No laptops match' : 'No laptops in ' + esc(dept.name) + ' yet'}</h3><p>${all.length ? 'Try a different search or clear the filters.' : (S.canWrite ? 'Click <b>Add laptop</b> to add the first one.' : 'Laptops will show here once they are added.')}</p></div>`}
+      </div>`;
+    try { if (localStorage.getItem('lt-help') === 'open') $('#help').open = true; } catch (e) {}
+  }
+
+  /* ---------- Edit drawer ---------- */
+  const F = (id, label, inner, hint = '') => `<div class="field"><label for="${id}">${label}</label>${inner}${hint ? `<span class="hint">${hint}</span>` : ''}</div>`;
+  const inp = (id, v, ph = '', type = 'text', cls = '') => `<input id="${id}" type="${type}" value="${esc(v || '')}" placeholder="${esc(ph)}" class="${cls}" ${S.canWrite ? '' : 'disabled'}>`;
+  const sel = (id, v, opts) => `<select id="${id}" ${S.canWrite ? '' : 'disabled'}><option value="">— Not set —</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+
+  function openDrawer(id) {
+    const dept = currentDept();
+    const l = id ? S.laptops.find(x => x.id === id) : { dept: dept.id, returnStatus: 'Pending', subDept: dept.name };
+    if (!l) return;
+    const isNew = !id;
+    $('#layer').innerHTML = `
+      <div class="scrim" id="scrim"></div>
+      <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+        <div class="drawer-head">
+          <div><h2 id="dTitle">${isNew ? 'Add laptop to ' + esc(dept.name) : esc(l.serial || l.hostname || 'Laptop')}</h2>
+          <div class="meta">${isNew ? 'Fill in what you know. You can update it later.' : (l.updatedAt ? 'Last updated by ' + esc(l.updatedBy || 'someone') + ' · ' + esc(fmtWhen(l.updatedAt)) : 'Not edited yet')}</div></div>
+          <button class="x" type="button" id="dClose" aria-label="Close">${ICON.x}</button>
+        </div>
+        <form class="drawer-body" id="dForm" autocomplete="off">
+          <div class="live-checklist" id="liveCk"></div>
+          <fieldset><legend>Return</legend>
+            <div class="grid2">
+              ${F('f_returnStatus', 'Return status', sel('f_returnStatus', l.returnStatus, ['Returned', 'Pending']))}
+              ${F('f_dateReturned', 'Date returned', inp('f_dateReturned', l.dateReturned, '', 'date'))}
+            </div>
+          </fieldset>
+          <fieldset><legend>IT checks</legend>
+            ${F('f_snipeit', 'Snipe-IT status', sel('f_snipeit', l.snipeit, ['Ready to Deploy', 'Deploy', 'In Checking', 'Faulty']))}
+            <div class="grid2">
+              ${F('f_win11', 'Windows 11 updated?', sel('f_win11', l.win11, ['Yes', 'No', 'N/a']), 'Pick N/a if it can’t be upgraded (e.g. faulty)')}
+              ${F('f_win11Version', 'Windows 11 version', inp('f_win11Version', l.win11Version, 'e.g. 24H2'))}
+            </div>
+          </fieldset>
+          <fieldset><legend>Laptop</legend>
+            <div class="grid2">
+              ${F('f_serial', 'Serial number', inp('f_serial', l.serial, 'e.g. 5CD125P43G', 'text', 'mono'))}
+              ${F('f_hostname', 'Hostname', inp('f_hostname', l.hostname, 'e.g. NV00025314', 'text', 'mono'))}
+              ${F('f_inventoryTag', 'Inventory tag', inp('f_inventoryTag', l.inventoryTag, 'e.g. LP-22-01-0021', 'text', 'mono'))}
+              ${F('f_manufacturer', 'Manufacturer', `<input id="f_manufacturer" list="mfrList" value="${esc(l.manufacturer || '')}" placeholder="e.g. HP" ${S.canWrite ? '' : 'disabled'}><datalist id="mfrList"><option>HP</option><option>Dell</option><option>Asus</option><option>Lenovo</option><option>Huawei</option><option>Acer</option><option>Apple</option></datalist>`)}
+            </div>
+            ${F('f_model', 'Laptop model', inp('f_model', l.model, 'e.g. 15-ef1300wm'))}
+            <div id="dupWarn"></div>
+          </fieldset>
+          <fieldset><legend>Employee</legend>
+            <div class="grid2">
+              ${F('f_employeeName', 'Employee name', inp('f_employeeName', l.employeeName))}
+              ${F('f_employeeId', 'Employee ID', inp('f_employeeId', l.employeeId))}
+            </div>
+            ${F('f_subDept', 'Department / location', inp('f_subDept', l.subDept, 'e.g. RTM, Last Mile Ampang'))}
+          </fieldset>
+          <fieldset><legend>Notes</legend>
+            ${F('f_remarks', 'Remarks', `<textarea id="f_remarks" ${S.canWrite ? '' : 'disabled'} placeholder="e.g. assigned to LM hub Puchong">${esc(l.remarks || '')}</textarea>`)}
+          </fieldset>
+        </form>
+        <div class="drawer-foot">
+          <span class="msg" id="dMsg"></span>
+          <button class="btn" type="button" id="dCancel">${S.canWrite ? 'Cancel' : 'Close'}</button>
+          ${S.canWrite ? `<button class="btn primary" type="button" id="dSave">${isNew ? 'Add laptop' : 'Save changes'}</button>` : ''}
+        </div>
+      </aside>`;
+    const keys = ['returnStatus', 'dateReturned', 'snipeit', 'win11', 'win11Version', 'serial', 'hostname', 'inventoryTag', 'manufacturer', 'model', 'employeeName', 'employeeId', 'subDept', 'remarks'];
+    const read = () => { const o = {}; keys.forEach(k => { o[k] = ($('#f_' + k).value || '').trim(); }); if (!o.returnStatus) o.returnStatus = 'Pending'; return o; };
+    const live = () => {
+      const o = read(); const n = doneCount(o);
+      $('#liveCk').innerHTML = `<div class="head"><span>Checklist</span><span>${n}/4 ${n === 4 ? '<span class="pill p-green">Fully completed</span>' : ''}</span></div>` +
+        STEPS.map(s => `<div class="row"><span class="ck ${s.test(o) ? 'on' : ''}">${s.test(o) ? ICON.check : ''}</span>${s.label}<span class="why">${s.test(o) ? 'Done' : esc(s.rule)}</span></div>`).join('');
+      const ser = o.serial.toUpperCase();
+      const dup = ser && S.laptops.find(x => x.id !== id && (x.serial || '').toUpperCase() === ser);
+      $('#dupWarn').innerHTML = dup ? `<div class="warn">This serial number is already in ${esc((S.depts.find(d => d.id === dup.dept) || {}).name || 'another tab')}. Check it isn’t a duplicate.</div>` : '';
+    };
+    live();
+    $('#dForm').addEventListener('input', live);
+    $('#dForm').addEventListener('change', live);
+    $('#dForm').addEventListener('submit', e => e.preventDefault());
+    const close = () => { $('#layer').innerHTML = ''; };
+    $('#scrim').onclick = close; $('#dClose').onclick = close; $('#dCancel').onclick = close;
+    const onKey = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => (isNew ? $('#f_serial') : $('#f_returnStatus'))?.focus(), 30);
+
+    const save = $('#dSave');
+    if (save) save.onclick = async () => {
+      const o = read();
+      if (!o.serial && !o.hostname) { $('#dMsg').textContent = 'Enter a serial number or hostname so the laptop can be found later.'; return; }
+      save.disabled = true; $('#dMsg').textContent = '';
+      try {
+        if (isNew) await api('/laptops', { method: 'POST', body: { ...o, dept: l.dept } });
+        else await api('/laptops/' + id, { method: 'PUT', body: { ...o, version: l.version } });
+        close(); toast(isNew ? 'Laptop added' : 'Changes saved');
+        refresh(true);
+      } catch (e) {
+        save.disabled = false;
+        $('#dMsg').textContent = e.status ? e.message : 'Couldn’t save just now. Check your connection and try again.';
+      }
+    };
+  }
+
+  /* ---------- Add department ---------- */
+  function openAddDept() {
+    $('#layer').innerHTML = `
+      <div class="scrim" id="scrim"></div>
+      <form class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" id="mForm">
+        <h2 id="mTitle">Add a department tab</h2>
+        <p>Creates a new tab with its own summary, checklist and laptop list.</p>
+        <div class="field"><label for="m_name">Department name</label><input id="m_name" placeholder="e.g. Last Mile, Finance" maxlength="40"></div>
+        <span class="msg" id="mMsg" style="color:var(--red);font-size:13px"></span>
+        <div class="row"><button class="btn" type="button" id="mCancel">Cancel</button><button class="btn primary" type="submit" id="mSave">Add tab</button></div>
+      </form>`;
+    const close = () => { $('#layer').innerHTML = ''; };
+    $('#scrim').onclick = close; $('#mCancel').onclick = close;
+    setTimeout(() => $('#m_name').focus(), 30);
+    $('#mForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const name = $('#m_name').value.trim();
+      if (!name) { $('#mMsg').textContent = 'Type a name for the new tab.'; return; }
+      if (S.depts.some(d => d.name.toLowerCase() === name.toLowerCase())) { $('#mMsg').textContent = 'A tab with that name already exists.'; return; }
+      $('#mSave').disabled = true;
+      try {
+        const d = await api('/departments', { method: 'POST', body: { name } });
+        S.tab = d.id; close(); toast('Tab “' + name + '” added');
+        refresh(true);
+      } catch (err) { $('#mSave').disabled = false; $('#mMsg').textContent = err.status ? err.message : 'Couldn’t add the tab. Check your connection and try again.'; }
+    });
+  }
+
+  /* ---------- Excel export ---------- */
+  const HEAD = ['Employee Name', 'Employee ID', 'Department', 'Manufacturer', 'Laptop Model', 'Hostname', 'Inventory Tag', 'Serial Number', 'Return Status', 'Date Returned', 'Snipe-IT Status', 'Windows 11 Update', 'Windows 11 Version', 'Remarks', 'Checklist Done (of 4)', 'Fully Completed', 'Last Updated By', 'Last Updated At'];
+  function sheetFor(dept) {
+    const rows = deptLaptops(dept.id).sort((a, b) => (a.order || 0) - (b.order || 0)).map(l => [
+      l.employeeName, l.employeeId, l.subDept || dept.name, l.manufacturer, l.model, l.hostname, l.inventoryTag, l.serial, l.returnStatus, l.dateReturned, l.snipeit, l.win11, l.win11Version, l.remarks,
+      doneCount(l), isDone(l) ? 'Yes' : 'No', l.updatedBy || '', l.updatedAt ? fmtWhen(l.updatedAt) : ''
+    ].map(v => v ?? ''));
+    const ws = XLSX.utils.aoa_to_sheet([HEAD, ...rows]);
+    ws['!cols'] = HEAD.map(h => ({ wch: Math.max(12, h.length + 2) }));
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: HEAD.length - 1 } }) };
+    return ws;
+  }
+  function exportXlsx(depts, filename) {
+    if (!window.XLSX) { toast('Excel tool is still loading, try again in a moment'); return; }
+    const wb = XLSX.utils.book_new();
+    depts.forEach(d => XLSX.utils.book_append_sheet(wb, sheetFor(d), d.name.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31)));
+    XLSX.writeFile(wb, filename);
+    toast('Excel file downloaded');
+  }
+  const stamp = () => new Date().toISOString().slice(0, 10);
+
+
+  /* ---------- Excel import ---------- */
+  const HMAP = {
+    employeename: 'employeeName', employeeid: 'employeeId', department: 'subDept', manufacturer: 'manufacturer',
+    laptopmodel: 'model', model: 'model', hostname: 'hostname', inventorytag: 'inventoryTag', inventorytagging: 'inventoryTag',
+    serialnumber: 'serial', returnstatus: 'returnStatus', datereturned: 'dateReturned', snipeitupdate: 'snipeit',
+    snipeitstatus: 'snipeit', windows11update: 'win11', windows11version: 'win11Version', remarks: 'remarks'
+  };
+  const hnorm = v => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const pad = n => String(n).padStart(2, '0');
+  function cellStr(v) {
+    if (v instanceof Date) return isNaN(v) ? '' : `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(v);
+    return String(v ?? '').trim();
+  }
+  function parseSheet(ws) {
+    const grid = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    for (let h = 0; h < Math.min(grid.length, 6); h++) {
+      const keys = grid[h].map(c => HMAP[hnorm(c)] || null);
+      if (!keys.includes('serial') && !keys.includes('hostname')) continue;
+      const rows = [];
+      for (const line of grid.slice(h + 1)) {
+        const r = {};
+        keys.forEach((k, i) => { if (k && !(k in r && r[k])) r[k] = cellStr(line[i]); });
+        if (r.serial || r.hostname) rows.push(r);
+      }
+      return rows;
+    }
+    return null;
+  }
+  function guessDept(sheetName) {
+    const n = hnorm(sheetName);
+    const d = S.depts.find(d => hnorm(d.name) === n || hnorm(d.id) === n);
+    return d ? d.id : '';
+  }
+  function openImport() {
+    $('#layer').innerHTML = `
+      <div class="scrim" id="scrim"></div>
+      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="iTitle">
+        <h2 id="iTitle">Import from Excel</h2>
+        <p>Pick a tracker spreadsheet. Only new information is copied in: blank cells never erase anything, and a laptop marked Returned is never set back to Pending. You’ll see a summary before anything is saved.</p>
+        <div class="field"><label for="i_file">Excel file</label><input id="i_file" type="file" accept=".xlsx,.xls,.csv"></div>
+        <div id="iBody"></div>
+        <span class="msg" id="iMsg" style="color:var(--red);font-size:13px"></span>
+        <div class="row"><button class="btn" type="button" id="iCancel">Cancel</button><button class="btn primary" type="button" id="iGo" disabled>Check changes</button></div>
+      </div>`;
+    const close = () => { $('#layer').innerHTML = ''; };
+    $('#scrim').onclick = close; $('#iCancel').onclick = close;
+    let sheets = [], checked = null;
+    const go = $('#iGo');
+    const payload = () => sheets.map((sh, i) => ({ department: $('#i_s' + i).value, rows: sh.rows })).filter(x => x.department);
+    const resetCheck = () => { checked = null; go.textContent = 'Check changes'; go.disabled = !payload().length; $('#iSummary') && ($('#iSummary').innerHTML = ''); };
+    $('#i_file').addEventListener('change', async e => {
+      $('#iMsg').textContent = ''; $('#iBody').innerHTML = ''; go.disabled = true; checked = null; go.textContent = 'Check changes';
+      const f = e.target.files[0]; if (!f) return;
+      if (!window.XLSX) { $('#iMsg').textContent = 'The Excel tool is still loading. Try again in a moment.'; return; }
+      try {
+        const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
+        sheets = wb.SheetNames.map(name => ({ name, rows: parseSheet(wb.Sheets[name]) }));
+      } catch (err) { $('#iMsg').textContent = 'Couldn’t read that file. Make sure it’s an Excel (.xlsx) file.'; return; }
+      $('#iBody').innerHTML = `
+        <p class="eyebrow" style="margin-top:4px">Which tab should each sheet go into?</p>
+        <div class="import-sheets">${sheets.map((sh, i) => `
+          <div class="import-sheet">
+            <span><b>${esc(sh.name)}</b><span class="dim">${sh.rows ? sh.rows.length + ' laptops found' : 'Not a laptop list (no Serial Number or Hostname column)'}</span></span>
+            <select id="i_s${i}" ${sh.rows ? '' : 'disabled'} aria-label="Tab for ${esc(sh.name)}">
+              <option value="">Skip this sheet</option>
+              ${S.depts.map(d => `<option value="${esc(d.id)}" ${sh.rows && guessDept(sh.name) === d.id ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+        </div>
+        <div id="iSummary" class="import-summary"></div>`;
+      sheets.forEach((sh, i) => $('#i_s' + i).addEventListener('change', resetCheck));
+      resetCheck();
+    });
+    go.onclick = async () => {
+      const body = payload(); if (!body.length) return;
+      go.disabled = true; $('#iMsg').textContent = '';
+      try {
+        if (!checked) {
+          const r = await api('/import', { method: 'POST', body: { dryRun: true, sheets: body } });
+          checked = r;
+          const fieldName = { employeeName: 'Employee name', employeeId: 'Employee ID', subDept: 'Department', manufacturer: 'Manufacturer', model: 'Model', hostname: 'Hostname', inventoryTag: 'Inventory tag', returnStatus: 'Return status', dateReturned: 'Date returned', snipeit: 'Snipe-IT', win11: 'Windows 11', win11Version: 'Win 11 version', remarks: 'Remarks' };
+          $('#iSummary').innerHTML = `
+            <p class="eyebrow" style="margin-top:8px">What will change</p>
+            <div class="nums"><span><b>${r.updatedLaptops}</b> laptops updated</span><span><b>${r.newLaptops}</b> new laptops</span><span><b>${r.conflicts.length}</b> duplicate-row differences</span></div>
+            ${r.changes.length ? `<div class="import-list">${r.changes.map(c => `<div><span class="mono">${esc(c.laptop)}</span> · ${esc(fieldName[c.field] || c.field)}: ${esc(c.old || '(blank)')} → <b>${esc(c.new)}</b></div>`).join('')}</div>` : ''}
+            ${r.added.length ? `<div class="import-list">${r.added.map(a => `<div>New in ${esc(a.department)}: <span class="mono">${esc(a.laptop)}</span> (${esc(a.returnStatus)})</div>`).join('')}</div>` : ''}
+            ${r.conflicts.length ? `<div class="warn">The file lists some laptops twice with different values. The lower (newer) row will be used:</div><div class="import-list">${r.conflicts.map(c => `<div><span class="mono">${esc(c.laptop)}</span> · ${esc(fieldName[c.field] || c.field)}: using <b>${esc(c.kept)}</b> instead of ${esc(c.other)}</div>`).join('')}</div>` : ''}
+            ${!r.updatedLaptops && !r.newLaptops ? '<p>Nothing new in this file. The tracker is already up to date.</p>' : ''}`;
+          go.textContent = (r.updatedLaptops || r.newLaptops) ? 'Apply import' : 'Check changes';
+          go.disabled = !(r.updatedLaptops || r.newLaptops);
+        } else {
+          const r = await api('/import', { method: 'POST', body: { dryRun: false, sheets: body } });
+          close(); toast(`Import done: ${r.updatedLaptops} updated, ${r.newLaptops} new`);
+          refresh(true);
+        }
+      } catch (err) { go.disabled = false; $('#iMsg').textContent = err.status ? err.message : 'Couldn’t reach the tracker. Check your connection and try again.'; }
+    };
+  }
+
+  /* ---------- Events ---------- */
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-tab],[data-filter],[data-step],[data-id],#addDept,#addLaptop,#exportTab,#exportAll,#clear,#importBtn');
+    if (!t) return;
+    if (t.dataset.tab) { S.tab = t.dataset.tab; S.step = null; S.filter = 'all'; S.q = ''; try { localStorage.setItem('lt-tab', S.tab); } catch (x) {} history.replaceState(null, '', '#' + S.tab); render(); }
+    else if (t.dataset.filter) { S.filter = t.dataset.filter; render(); }
+    else if (t.dataset.step) { S.step = S.step === t.dataset.step ? null : t.dataset.step; render(); }
+    else if (t.dataset.id) openDrawer(t.dataset.id);
+    else if (t.id === 'addDept') openAddDept();
+    else if (t.id === 'addLaptop') openDrawer(null);
+    else if (t.id === 'clear') { S.filter = 'all'; S.step = null; S.q = ''; render(); }
+    else if (t.id === 'exportTab') { const d = currentDept(); exportXlsx([d], `${d.name} Laptop Tracker ${stamp()}.xlsx`); }
+    else if (t.id === 'exportAll') exportXlsx(S.depts, `Retrenchment Laptop Tracker ${stamp()}.xlsx`);
+    else if (t.id === 'importBtn') openImport();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.matches('tr[data-id], .card[data-id]')) openDrawer(e.target.dataset.id);
+  });
+  let qTimer;
+  document.addEventListener('input', e => {
+    if (e.target.id === 'q') {
+      clearTimeout(qTimer);
+      qTimer = setTimeout(() => {
+        const pos = e.target.selectionStart; S.q = e.target.value; render();
+        const q = $('#q'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} }
+      }, 180);
+    }
+  });
+  document.addEventListener('change', e => { if (e.target.id === 'sort') { S.sort = e.target.value; render(); } });
+  document.addEventListener('toggle', e => { if (e.target.id === 'help') { try { localStorage.setItem('lt-help', e.target.open ? 'open' : 'closed'); } catch (x) {} } }, true);
+
+  /* ---------- Boot ---------- */
+  async function refresh(force) {
+    try {
+      const [d, l] = await Promise.all([api('/departments'), api('/laptops')]);
+      const sig = JSON.stringify([d, l]);
+      if (!force && sig === S.sig) return;
+      S.sig = sig;
+      S.depts = d.departments; S.laptops = l.laptops;
+      S.loaded.d = S.loaded.l = true;
+      const typing = document.activeElement && document.activeElement.id === 'q';
+      if (!typing || force) render();
+    } catch (e) {
+      if (!S.loaded.l) $('#main').innerHTML = `<div class="list"><div class="empty"><h3>Couldn’t load the laptops</h3><p>${esc(e.message || 'Check your connection and refresh the page.')}</p></div></div>`;
+    }
+  }
+  async function boot() {
+    try {
+      const me = await api('/me');
+      if (me && me.email) {
+        S.me = me.email;
+        $('#meImg').textContent = me.email.charAt(0).toUpperCase();
+        $('#meName').textContent = me.email;
+        $('#me').hidden = false;
+      }
+    } catch (e) {}
+    await refresh(true);
+    setInterval(() => { if (!document.hidden) refresh(false); }, 20000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(false); });
+  }
+  boot();
+})();
+</script>
+
+</body>
+</html>

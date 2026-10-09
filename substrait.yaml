@@ -1,0 +1,7 @@
+description: >
+  Tracks laptops returned during retrenchment at NinjaVan Malaysia, per department
+  (RTM, Ninja Mart and more), through a 4-step checklist: returned, Snipe-IT updated,
+  inventory tag checked and Windows 11 updated. For the IT team, with Excel import
+  and export.
+
+database: oceanbase
